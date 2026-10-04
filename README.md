@@ -48,7 +48,7 @@
 
 ### 🔧 قابلیت‌های فنی
 
-- **نصب خودکار پکیج‌ها**: TensorFlow, PyTorch, YOLOv5
+- **نصب خودکار پکیج‌ها**: PyTorch, TensorBoard, YOLOv5
 - **دانلود خودکار YOLOv5**: از مخزن رسمی Ultralytics
 - **تشخیص در تصویر**: پردازش تصاویر ثابت با دقت بالا
 - **تشخیص در ویدیو**: پردازش ویدیوهای ضبط شده
@@ -106,7 +106,6 @@ python yolov5_object_detection.py
 برنامه به صورت خودکار موارد زیر را نصب می‌کند:
 
 - ✅ آپگرید pip
-- ✅ نصب TensorFlow
 - ✅ نصب TensorBoard
 - ✅ نصب PyTorch
 - ✅ دانلود YOLOv5 از GitHub
@@ -300,20 +299,23 @@ detector.detect_image("image.jpg", classes=[0, 16, 17])  # انسان، سگ، �
 yolov5-object-detection/
 │
 ├── yolov5_object_detection.py    # فایل اصلی برنامه
+├── example_usage.py               # مثال‌های آماده
+├── INSTRUCTIONS_FA.txt            # راهنمای کامل فارسی
 ├── README.md                      # این فایل
 ├── LICENSE                        # مجوز استفاده
 ├── requirements.txt               # پکیج‌های مورد نیاز (اختیاری)
+│
+├── runs/                          # نتایج تشخیص (پیش‌فرض save_dir)
+│   └── detect/
+│       ├── exp/
+│       ├── exp2/
+│       └── ...
 │
 └── yolov5/                        # پوشه YOLOv5 (خودکار دانلود می‌شود)
     ├── detect.py
     ├── train.py
     ├── models/
-    ├── utils/
-    └── runs/                      # نتایج تشخیص
-        └── detect/
-            ├── exp/
-            ├── exp2/
-            └── ...
+    └── utils/
 ```
 
 ---

@@ -104,7 +104,7 @@ class YOLOv5Detector:
             print("═" * 80)
             
             # مرحله 1: آپگرید pip
-            print("\n[1/5] در حال آپگرید pip...")
+            print("\n[1/4] در حال آپگرید pip...")
             result = subprocess.run(
                 [sys.executable, "-m", "pip", "install", "--upgrade", "pip", "--quiet"],
                 capture_output=True,
@@ -115,20 +115,9 @@ class YOLOv5Detector:
             else:
                 print("      ⚠ خطا در آپگرید pip (ادامه می‌دهیم...)")
             
-            # مرحله 2: نصب TensorFlow
-            print("\n[2/5] در حال نصب TensorFlow...")
-            result = subprocess.run(
-                [sys.executable, "-m", "pip", "install", "tensorflow", "--quiet"],
-                capture_output=True,
-                text=True
-            )
-            if result.returncode == 0:
-                print("      ✓ TensorFlow نصب شد")
-            else:
-                print("      ⚠ خطا در نصب TensorFlow")
-            
-            # مرحله 3: نصب TensorBoard
-            print("\n[3/5] در حال نصب TensorBoard...")
+            # مرحله 2: نصب TensorBoard
+            # (TensorFlow لازم نیست - YOLOv5 فقط با PyTorch کار می‌کنه)
+            print("\n[2/4] در حال نصب TensorBoard...")
             result = subprocess.run(
                 [sys.executable, "-m", "pip", "install", "tensorboard", "--quiet"],
                 capture_output=True,
@@ -137,8 +126,8 @@ class YOLOv5Detector:
             if result.returncode == 0:
                 print("      ✓ TensorBoard نصب شد")
             
-            # مرحله 4: نصب PyTorch
-            print("\n[4/5] در حال نصب PyTorch...")
+            # مرحله 3: نصب PyTorch
+            print("\n[3/4] در حال نصب PyTorch...")
             result = subprocess.run(
                 [sys.executable, "-m", "pip", "install", "torch", "--quiet"],
                 capture_output=True,
@@ -149,8 +138,8 @@ class YOLOv5Detector:
             else:
                 print("      ⚠ خطا در نصب PyTorch")
             
-            # مرحله 5: دانلود YOLOv5
-            print("\n[5/5] در حال دانلود YOLOv5...")
+            # مرحله 4: دانلود YOLOv5
+            print("\n[4/4] در حال دانلود YOLOv5...")
             if os.path.exists('yolov5'):
                 print("      ℹ پوشه yolov5 از قبل وجود دارد")
                 user_input = input("      آیا می‌خواهید دوباره دانلود شود؟ (y/n): ")
@@ -200,6 +189,28 @@ class YOLOv5Detector:
             os.chdir(self.original_dir)
             return False
     
+    def _build_cmd(self, source: str, classes: Optional[List[int]], save_dir: str) -> List[str]:
+        """دستور detect.py؛ نتایج توی save_dir (نسبت به پوشه‌ی کاری فعلی) ذخیره می‌شن"""
+        cmd = [
+            sys.executable, "detect.py",
+            "--weights", self.weights,
+            "--conf-thres", str(self.conf_threshold),
+            "--source", source,
+            "--project", os.path.join(self.original_dir, save_dir),
+        ]
+        if classes is not None:
+            cmd.extend(["--classes"] + [str(c) for c in classes])
+            print(f"🎯 کلاس‌های فیلتر شده: {classes}")
+        return cmd
+
+    def _latest_run_dir(self, save_dir: str) -> Optional[Path]:
+        """جدیدترین پوشه‌ی exp بر اساس زمان ساخت (نه ترتیب الفبایی - exp10 قبل از exp2 میاد)"""
+        detect_path = Path(self.original_dir) / save_dir
+        if not detect_path.is_dir():
+            return None
+        runs = [d for d in detect_path.iterdir() if d.is_dir()]
+        return max(runs, key=lambda d: d.stat().st_mtime) if runs else None
+
     def detect_image(self, 
                     image_path: str, 
                     classes: Optional[List[int]] = None,
@@ -243,16 +254,7 @@ class YOLOv5Detector:
             os.chdir(self.yolov5_path)
             
             # ساخت دستور
-            cmd = [
-                sys.executable, "detect.py",
-                "--weights", self.weights,
-                "--conf-thres", str(self.conf_threshold),
-                "--source", os.path.abspath(image_path)
-            ]
-            
-            if classes is not None:
-                cmd.extend(["--classes"] + [str(c) for c in classes])
-                print(f"🎯 کلاس‌های فیلتر شده: {classes}")
+            cmd = self._build_cmd(os.path.abspath(image_path), classes, save_dir)
             
             print(f"\n⏳ در حال پردازش...")
             
@@ -263,10 +265,8 @@ class YOLOv5Detector:
                 print("✓ تشخیص با موفقیت انجام شد!")
                 
                 # پیدا کردن آخرین فولدر exp
-                detect_path = self.yolov5_path / "runs" / "detect"
-                exp_folders = sorted([d for d in detect_path.iterdir() if d.is_dir()])
-                if exp_folders:
-                    latest_exp = exp_folders[-1]
+                latest_exp = self._latest_run_dir(save_dir)
+                if latest_exp is not None:
                     output_file = latest_exp / Path(image_path).name
                     
                     if output_file.exists():
@@ -331,16 +331,7 @@ class YOLOv5Detector:
             os.chdir(self.yolov5_path)
             
             # ساخت دستور
-            cmd = [
-                sys.executable, "detect.py",
-                "--weights", self.weights,
-                "--conf-thres", str(self.conf_threshold),
-                "--source", os.path.abspath(video_path)
-            ]
-            
-            if classes is not None:
-                cmd.extend(["--classes"] + [str(c) for c in classes])
-                print(f"🎯 کلاس‌های فیلتر شده: {classes}")
+            cmd = self._build_cmd(os.path.abspath(video_path), classes, save_dir)
             
             print(f"\n⏳ در حال پردازش ویدیو (ممکن است زمان‌بر باشد)...")
             
@@ -351,10 +342,8 @@ class YOLOv5Detector:
                 print("✓ پردازش ویدیو با موفقیت انجام شد!")
                 
                 # پیدا کردن ویدیوی خروجی
-                detect_path = self.yolov5_path / "runs" / "detect"
-                exp_folders = sorted([d for d in detect_path.iterdir() if d.is_dir()])
-                if exp_folders:
-                    latest_exp = exp_folders[-1]
+                latest_exp = self._latest_run_dir(save_dir)
+                if latest_exp is not None:
                     video_name = Path(video_path).stem
                     output_file = list(latest_exp.glob(f"{video_name}.*"))
                     
@@ -374,7 +363,8 @@ class YOLOv5Detector:
     
     def detect_webcam(self, 
                      classes: Optional[List[int]] = None,
-                     camera_index: int = 0):
+                     camera_index: int = 0,
+                     save_dir: str = 'runs/detect'):
         """
         تشخیص اشیاء زنده از وبکم
         
@@ -405,16 +395,7 @@ class YOLOv5Detector:
             os.chdir(self.yolov5_path)
             
             # ساخت دستور
-            cmd = [
-                sys.executable, "detect.py",
-                "--weights", self.weights,
-                "--conf-thres", str(self.conf_threshold),
-                "--source", str(camera_index)
-            ]
-            
-            if classes is not None:
-                cmd.extend(["--classes"] + [str(c) for c in classes])
-                print(f"🎯 کلاس‌های فیلتر شده: {classes}")
+            cmd = self._build_cmd(str(camera_index), classes, save_dir)
             
             print(f"\n⏳ در حال راه‌اندازی دوربین...")
             
